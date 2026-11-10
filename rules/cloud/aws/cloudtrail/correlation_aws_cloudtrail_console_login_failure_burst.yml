@@ -1,0 +1,26 @@
+title: AWS CloudTrail Console Login Failure Burst
+id: 09a8114e-7918-4583-9fbb-df3a30aebb99
+name: aws_cloudtrail_console_login_failure_burst
+status: experimental
+description: Detects ten or more failed AWS console authentication events from one source IP within five minutes.
+references:
+    - https://github.com/SigmaHQ/sigma/blob/d7c9da10c170a6988d68ebdf2c9f7bd8782b7c55/rules/cloud/aws/cloudtrail/aws_cloudtrail_console_login_failed_authentication.yml
+author: Harsha Malepati (harshacreate)
+date: 2026-11-11
+tags:
+    - attack.credential-access
+    - attack.t1110
+correlation:
+    type: event_count
+    rules:
+        - 6393e346-1977-46ef-8987-ad414a145fad
+    group-by:
+        - sourceIPAddress
+    timespan: 5m
+    condition:
+        gte: 10
+    generate: true
+falsepositives:
+    - Multiple authorized users behind a shared NAT or proxy may exceed the threshold.
+    - Password reset events or other legitimate login failures may cluster during a short period.
+level: medium

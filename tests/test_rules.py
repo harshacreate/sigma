@@ -298,7 +298,16 @@ class TestRules(unittest.TestCase):
         files_and_their_detections = {}
 
         for file in self.yield_next_rule_file_path(self.path_to_rules):
+            if any(
+                rule_part is not None and "correlation" in rule_part
+                for rule_part in self.get_rule_yaml(file_path=file)
+            ):
+                # Correlation meta-rules do not contain an independent
+                # detection/logsource pair to compare with base rules.
+                continue
             detection = self.get_rule_part(file_path=file, part_name="detection")
+            if detection is None:
+                continue
             logsource = self.get_rule_part(file_path=file, part_name="logsource")
             detection["logsource"] = {}
             detection["logsource"].update(logsource)
@@ -319,6 +328,36 @@ class TestRules(unittest.TestCase):
             [],
             Fore.YELLOW + "There are rule files with exactly the same detection logic.",
         )
+
+    def test_correlation_meta_rules_reference_existing_rules(self):
+        rule_ids = set()
+        rule_names = set()
+        files = list(self.yield_next_rule_file_path(self.path_to_rules))
+        for file in files:
+            for rule_part in self.get_rule_yaml(file_path=file):
+                if not rule_part:
+                    continue
+                if rule_part.get("id"):
+                    rule_ids.add(rule_part["id"])
+                if rule_part.get("name"):
+                    rule_names.add(rule_part["name"])
+
+        for file in files:
+            for rule_part in self.get_rule_yaml(file_path=file):
+                if not rule_part or "correlation" not in rule_part:
+                    continue
+                correlation = rule_part["correlation"]
+                self.assertIn(correlation.get("type"), {
+                    "event_count", "value_count", "temporal", "temporal_ordered",
+                    "value_sum", "value_avg", "value_median", "value_percentile",
+                }, file)
+                references = correlation.get("rules", [])
+                self.assertTrue(references, file)
+                for reference in references:
+                    self.assertTrue(
+                        reference in rule_ids or reference in rule_names,
+                        f"{file} references missing Sigma rule {reference}",
+                    )
 
     def test_source_eventlog(self):
         faulty_detections = []

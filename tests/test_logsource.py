@@ -190,6 +190,10 @@ class TestRules(unittest.TestCase):
         ]
 
         for file in self.yield_next_rule_file_path(self.path_to_rules):
+            if self.get_rule_part(file_path=file, part_name="correlation") is not None:
+                # Sigma meta-rules intentionally omit logsource and reference
+                # ordinary Sigma detections through their correlation section.
+                continue
             logsource = self.get_rule_part(file_path=file, part_name="logsource")
             if not logsource:
                 print(Fore.RED + "Rule {} has no 'logsource'.".format(file))
